@@ -19,33 +19,52 @@
             <button onclick="generate()" id="genBtn" class="w-full bg-blue-600 text-white py-4 rounded-lg font-bold text-lg hover:bg-blue-700 transition">
                 Generate Content ✨
             </button>
-            <div id="output" class="mt-6 text-left p-4 bg-slate-100 rounded hidden whitespace-pre-wrap"></div>
+            <div id="output" class="mt-6 text-left p-6 bg-slate-100 rounded-xl border border-slate-200 hidden whitespace-pre-wrap leading-relaxed shadow-inner"></div>
         </div>
     </header>
 
     <script>
         async function generate() {
-            const url = document.getElementById('videoUrl').value;
+            const urlInput = document.getElementById('videoUrl');
             const btn = document.getElementById('genBtn');
             const output = document.getElementById('output');
 
-            if(!url) return alert("Paste a link!");
+            if(!urlInput.value) return alert("Please paste a YouTube link!");
 
-            btn.innerText = "AI is thinking...";
+            // UI Feedback
+            btn.innerText = "AI is watching the video...";
             btn.disabled = true;
+            output.classList.add('hidden');
 
             try {
-                // This calls your "Hidden Brain" file in the api folder
+                // IMPORTANT: We use '/api/generate' as the address. 
+                // Vercel automatically finds generate.js or generate.mjs inside the api folder.
                 const response = await fetch('/api/generate', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ videoUrl: url })
+                    body: JSON.stringify({ videoUrl: urlInput.value })
                 });
+
+                if (!response.ok) {
+                    throw new Error(`Server responded with status ${response.status}`);
+                }
+
                 const data = await response.json();
-                output.innerText = data.text;
-                output.classList.remove('hidden');
+
+                // THE "UNDEFINED" FIX: This checks every possible place the text could be.
+                const aiText = data.text || data.output || data.result || data.message;
+
+                if (aiText) {
+                    output.innerText = aiText;
+                    output.classList.remove('hidden');
+                } else {
+                    output.innerText = "The AI sent an empty response. Check your API key!";
+                    output.classList.remove('hidden');
+                }
+
             } catch (err) {
-                alert("Error connecting to AI!");
+                console.error(err);
+                alert("Error: " + err.message);
             } finally {
                 btn.innerText = "Generate Content ✨";
                 btn.disabled = false;
