@@ -1,37 +1,45 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-// This tells Vercel exactly how to run this file
-export const config = {
-  runtime: 'edge',
-};
-
 export default async function handler(req) {
-  // Check if it's a POST request
+  // 1. Only allow POST
   if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405 });
+    return new Response(JSON.stringify({ error: 'Only POST allowed' }), { status: 405 });
   }
 
   try {
-    const { videoUrl } = await req.json();
-    
-    // This grabs your key from the Vercel Settings you filled out earlier
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+    // 2. Read the video URL from the request
+    const body = await req.json();
+    const videoUrl = body.videoUrl;
 
-    const prompt = `Act as a social media expert. For this video URL: ${videoUrl}, write one LinkedIn post and one viral Tweet. Use emojis.`;
-    
+    if (!videoUrl) {
+      return new Response(JSON.stringify({ text: "Error: No URL provided" }), { status: 400 });
+    }
+
+    // 3. Get API Key from Vercel Environment Variables
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return new Response(JSON.stringify({ text: "Error: GEMINI_API_KEY is missing in Vercel settings" }), { status: 500 });
+    }
+
+    // 4. Start the AI
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+    const prompt = `Act as a social media expert. Based on this video link: ${videoUrl}, write 1 LinkedIn post and 1 Twitter post.`;
+
     const result = await model.generateContent(prompt);
     const response = await result.response;
-    const text = response.text();
+    const aiText = response.text();
 
-    return new Response(JSON.stringify({ text }), {
+    // 5. Send back the success package
+    return new Response(JSON.stringify({ text: aiText }), {
       status: 200,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { "Content-Type": "application/json" }
     });
+
   } catch (error) {
-    return new Response(JSON.stringify({ error: 'AI Connection Failed', details: error.message }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    // This logs the real error in Vercel's "Logs" tab
+    console.error("CRASH ERROR:", error.message);
+    return new Response(JSON.stringify({ text: "AI Error: " + error.message }), { status: 500 });
   }
 }
