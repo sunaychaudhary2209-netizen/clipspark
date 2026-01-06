@@ -8,41 +8,37 @@
     <style>
         @keyframes progress {
             0% { width: 0%; }
-            100% { width: 95%; } /* Stays at 95 until AI finishes */
+            100% { width: 95%; }
         }
-        .animate-progress {
-            animation: progress 15s ease-out forwards;
-        }
+        .animate-progress { animation: progress 20s ease-out forwards; }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-900 font-sans">
-    <nav class="p-6 flex justify-between items-center max-w-6xl mx-auto">
+    <nav class="p-6 max-w-6xl mx-auto">
         <h1 class="text-2xl font-bold text-blue-600">ClipSpark.ai</h1>
     </nav>
 
-    <header class="max-w-4xl mx-auto text-center mt-20 px-4 pb-20">
-        <h2 class="text-5xl font-extrabold mb-6">Turn 1 Video into <span class="text-blue-600">Viral Posts</span></h2>
+    <header class="max-w-4xl mx-auto text-center mt-10 px-4 pb-20">
+        <h2 class="text-5xl font-extrabold mb-6 leading-tight">Video to <span class="text-blue-600">Viral Posts</span></h2>
         
         <div class="bg-white p-8 rounded-2xl shadow-xl border border-slate-200">
             <input type="text" id="videoUrl" placeholder="Paste YouTube link here..." 
                    class="w-full p-4 border border-slate-300 rounded-lg mb-4 focus:ring-2 focus:ring-blue-500 outline-none">
             
-            <div id="loadingContainer" class="hidden mb-4 w-full bg-slate-200 rounded-full h-2.5 overflow-hidden">
-                <div id="progressBar" class="bg-blue-600 h-2.5 rounded-full"></div>
+            <div id="loadingBox" class="hidden mb-4 w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+                <div id="progressBar" class="bg-blue-600 h-full w-0 transition-all duration-500"></div>
             </div>
 
-            <button onclick="generate()" id="genBtn" class="w-full bg-blue-600 text-white py-4 rounded-lg font-bold text-lg hover:bg-blue-700 transition shadow-lg active:scale-[0.98]">
+            <button onclick="generate()" id="genBtn" class="w-full bg-blue-600 text-white py-4 rounded-lg font-bold text-lg hover:bg-blue-700 transition active:scale-[0.98]">
                 Generate Content ✨
             </button>
 
             <div id="resultContainer" class="mt-8 text-left hidden">
                 <div class="flex justify-between items-center mb-2">
-                    <span class="text-sm font-semibold text-slate-500 uppercase tracking-wider">AI Generated Content</span>
-                    <button onclick="copyToClipboard()" id="copyBtn" class="text-sm bg-slate-200 hover:bg-slate-300 px-3 py-1 rounded-md transition font-medium flex items-center gap-1">
-                        <span>Copy All</span>
-                    </button>
+                    <span class="text-sm font-bold text-slate-400 uppercase">Results</span>
+                    <button onclick="copyToClipboard()" id="copyBtn" class="text-sm bg-blue-50 text-blue-600 px-4 py-1 rounded-md font-semibold hover:bg-blue-100 transition">Copy All</button>
                 </div>
-                <div id="output" class="p-6 bg-slate-100 rounded-xl border border-slate-200 whitespace-pre-wrap leading-relaxed shadow-inner text-slate-800"></div>
+                <div id="output" class="p-6 bg-slate-50 rounded-xl border border-slate-200 whitespace-pre-wrap leading-relaxed text-slate-800 shadow-inner"></div>
             </div>
         </div>
     </header>
@@ -53,24 +49,16 @@
             const btn = document.getElementById('genBtn');
             const output = document.getElementById('output');
             const container = document.getElementById('resultContainer');
-            const loadingBox = document.getElementById('loadingContainer');
-            const progressBar = document.getElementById('progressBar');
+            const loadingBox = document.getElementById('loadingBox');
+            const bar = document.getElementById('progressBar');
 
-            if(!urlInput.value) return alert("Please paste a link first!");
+            if(!urlInput.value) return alert("Please paste a link!");
 
-            // 1. Reset & Show Loading
             btn.disabled = true;
+            btn.innerText = "AI is thinking...";
             container.classList.add('hidden');
             loadingBox.classList.remove('hidden');
-            progressBar.classList.add('animate-progress');
-
-            // 2. Change button text periodically
-            const messages = ["Analyzing video...", "Finding viral hooks...", "Writing posts..."];
-            let i = 0;
-            const msgTimer = setInterval(() => {
-                btn.innerText = messages[i % messages.length];
-                i++;
-            }, 4000);
+            bar.classList.add('animate-progress');
 
             try {
                 const response = await fetch('/api/generate.mjs', {
@@ -80,37 +68,28 @@
                 });
 
                 const data = await response.json();
-                if (!response.ok) throw new Error(data.text || "Server Error");
+                if (!response.ok) throw new Error(data.text || "Timeout Error");
 
-                // 3. Complete the progress bar
-                progressBar.classList.remove('animate-progress');
-                progressBar.style.width = "100%";
+                bar.classList.remove('animate-progress');
+                bar.style.width = "100%";
 
-                const aiText = data.text || data.output || data.result;
-                if (aiText) {
-                    output.innerText = aiText;
-                    container.classList.remove('hidden');
-                }
+                output.innerText = data.text;
+                container.classList.remove('hidden');
             } catch (err) {
-                alert("Error: " + err.message);
+                alert("The video is too long or the AI timed out. Try another!");
             } finally {
-                clearInterval(msgTimer);
                 btn.innerText = "Generate Content ✨";
                 btn.disabled = false;
-                // Hide loading bar after a short delay
-                setTimeout(() => { loadingBox.classList.add('hidden'); progressBar.style.width = "0%"; }, 1000);
+                setTimeout(() => { loadingBox.classList.add('hidden'); bar.style.width = "0%"; }, 1000);
             }
         }
 
         async function copyToClipboard() {
             const text = document.getElementById('output').innerText;
-            const copyBtn = document.getElementById('copyBtn');
-            try {
-                await navigator.clipboard.writeText(text);
-                const originalText = copyBtn.innerHTML;
-                copyBtn.innerHTML = "<span>✅ Copied!</span>";
-                setTimeout(() => { copyBtn.innerHTML = originalText; }, 2000);
-            } catch (err) { alert("Failed to copy."); }
+            const btn = document.getElementById('copyBtn');
+            await navigator.clipboard.writeText(text);
+            btn.innerText = "✅ Copied!";
+            setTimeout(() => btn.innerText = "Copy All", 2000);
         }
     </script>
 </body>
