@@ -11,15 +11,26 @@
         <h1 class="text-2xl font-bold text-blue-600">ClipSpark.ai</h1>
     </nav>
 
-    <header class="max-w-4xl mx-auto text-center mt-20 px-4">
+    <header class="max-w-4xl mx-auto text-center mt-20 px-4 pb-20">
         <h2 class="text-5xl font-extrabold mb-6">Turn 1 Video into <span class="text-blue-600">Viral Posts</span></h2>
+        
         <div class="bg-white p-8 rounded-2xl shadow-xl border border-slate-200">
-            <input type="text" id="videoUrl" placeholder="Paste video link here..." 
-                   class="w-full p-4 border border-slate-300 rounded-lg mb-4">
-            <button onclick="generate()" id="genBtn" class="w-full bg-blue-600 text-white py-4 rounded-lg font-bold text-lg hover:bg-blue-700 transition">
+            <input type="text" id="videoUrl" placeholder="Paste YouTube link here..." 
+                   class="w-full p-4 border border-slate-300 rounded-lg mb-4 focus:ring-2 focus:ring-blue-500 outline-none">
+            
+            <button onclick="generate()" id="genBtn" class="w-full bg-blue-600 text-white py-4 rounded-lg font-bold text-lg hover:bg-blue-700 transition shadow-lg active:scale-[0.98]">
                 Generate Content ✨
             </button>
-            <div id="output" class="mt-6 text-left p-6 bg-slate-100 rounded-xl border border-slate-200 hidden whitespace-pre-wrap leading-relaxed shadow-inner"></div>
+
+            <div id="resultContainer" class="mt-8 text-left hidden">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-sm font-semibold text-slate-500 uppercase tracking-wider">AI Generated Content</span>
+                    <button onclick="copyToClipboard()" id="copyBtn" class="text-sm bg-slate-200 hover:bg-slate-300 px-3 py-1 rounded-md transition font-medium flex items-center gap-1">
+                        <span>Copy All</span>
+                    </button>
+                </div>
+                <div id="output" class="p-6 bg-slate-100 rounded-xl border border-slate-200 whitespace-pre-wrap leading-relaxed shadow-inner text-slate-800"></div>
+            </div>
         </div>
     </header>
 
@@ -28,46 +39,52 @@
             const urlInput = document.getElementById('videoUrl');
             const btn = document.getElementById('genBtn');
             const output = document.getElementById('output');
+            const container = document.getElementById('resultContainer');
 
-            if(!urlInput.value) return alert("Please paste a YouTube link!");
+            if(!urlInput.value) return alert("Please paste a link first!");
 
-            // UI Feedback
-            btn.innerText = "AI is watching the video...";
+            // Loading state
+            btn.innerText = "AI is analyzing video...";
             btn.disabled = true;
-            output.classList.add('hidden');
+            container.classList.add('hidden');
 
             try {
-                // IMPORTANT: We use '/api/generate' as the address. 
-                // Vercel automatically finds generate.js or generate.mjs inside the api folder.
-                const response = await fetch('/api/generate', {
+                // Fetching from your .mjs file
+                const response = await fetch('/api/generate.mjs', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ videoUrl: urlInput.value })
                 });
 
-                if (!response.ok) {
-                    throw new Error(`Server responded with status ${response.status}`);
-                }
-
                 const data = await response.json();
+                
+                if (!response.ok) throw new Error(data.text || "Server Error");
 
-                // THE "UNDEFINED" FIX: This checks every possible place the text could be.
-                const aiText = data.text || data.output || data.result || data.message;
+                const aiText = data.text || data.output || data.result;
 
                 if (aiText) {
                     output.innerText = aiText;
-                    output.classList.remove('hidden');
-                } else {
-                    output.innerText = "The AI sent an empty response. Check your API key!";
-                    output.classList.remove('hidden');
+                    container.classList.remove('hidden');
                 }
-
             } catch (err) {
-                console.error(err);
                 alert("Error: " + err.message);
             } finally {
                 btn.innerText = "Generate Content ✨";
                 btn.disabled = false;
+            }
+        }
+
+        async function copyToClipboard() {
+            const text = document.getElementById('output').innerText;
+            const copyBtn = document.getElementById('copyBtn');
+            
+            try {
+                await navigator.clipboard.writeText(text);
+                const originalText = copyBtn.innerHTML;
+                copyBtn.innerHTML = "<span>✅ Copied!</span>";
+                setTimeout(() => { copyBtn.innerHTML = originalText; }, 2000);
+            } catch (err) {
+                alert("Failed to copy text.");
             }
         }
     </script>
