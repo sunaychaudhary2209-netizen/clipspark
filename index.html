@@ -3,93 +3,84 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ClipSpark AI | Repurpose Content</title>
+    <title>ClipSpark AI</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @keyframes progress {
-            0% { width: 0%; }
-            100% { width: 95%; }
-        }
+        @keyframes progress { 0% { width: 0%; } 100% { width: 95%; } }
         .animate-progress { animation: progress 20s ease-out forwards; }
     </style>
 </head>
-<body class="bg-slate-50 text-slate-900 font-sans">
-    <nav class="p-6 max-w-6xl mx-auto">
-        <h1 class="text-2xl font-bold text-blue-600">ClipSpark.ai</h1>
-    </nav>
-
-    <header class="max-w-4xl mx-auto text-center mt-10 px-4 pb-20">
-        <h2 class="text-5xl font-extrabold mb-6 leading-tight">Video to <span class="text-blue-600">Viral Posts</span></h2>
+<body class="bg-slate-50 text-slate-900">
+    <div class="max-w-3xl mx-auto mt-20 px-6">
+        <h1 class="text-4xl font-bold text-blue-600 mb-8 text-center">ClipSpark AI</h1>
         
-        <div class="bg-white p-8 rounded-2xl shadow-xl border border-slate-200">
+        <div class="bg-white p-8 rounded-2xl shadow-lg border border-slate-200">
             <input type="text" id="videoUrl" placeholder="Paste YouTube link here..." 
-                   class="w-full p-4 border border-slate-300 rounded-lg mb-4 focus:ring-2 focus:ring-blue-500 outline-none">
+                   class="w-full p-4 border rounded-lg mb-4 focus:ring-2 focus:ring-blue-500 outline-none">
             
-            <div id="loadingBox" class="hidden mb-4 w-full bg-slate-200 rounded-full h-2 overflow-hidden">
-                <div id="progressBar" class="bg-blue-600 h-full w-0 transition-all duration-500"></div>
+            <div id="loadingBox" class="hidden mb-4 w-full bg-slate-100 rounded-full h-3 overflow-hidden">
+                <div id="progressBar" class="bg-blue-600 h-full w-0"></div>
             </div>
 
-            <button onclick="generate()" id="genBtn" class="w-full bg-blue-600 text-white py-4 rounded-lg font-bold text-lg hover:bg-blue-700 transition active:scale-[0.98]">
+            <button onclick="generate()" id="genBtn" class="w-full bg-blue-600 text-white py-4 rounded-lg font-bold hover:bg-blue-700 transition">
                 Generate Content ✨
             </button>
 
-            <div id="resultContainer" class="mt-8 text-left hidden">
+            <div id="resultContainer" class="mt-8 hidden">
                 <div class="flex justify-between items-center mb-2">
-                    <span class="text-sm font-bold text-slate-400 uppercase">Results</span>
-                    <button onclick="copyToClipboard()" id="copyBtn" class="text-sm bg-blue-50 text-blue-600 px-4 py-1 rounded-md font-semibold hover:bg-blue-100 transition">Copy All</button>
+                    <span class="text-xs font-bold text-slate-400 uppercase">AI Output</span>
+                    <button onclick="copyToClipboard()" id="copyBtn" class="text-sm text-blue-600 font-semibold hover:underline">Copy All</button>
                 </div>
-                <div id="output" class="p-6 bg-slate-50 rounded-xl border border-slate-200 whitespace-pre-wrap leading-relaxed text-slate-800 shadow-inner"></div>
+                <div id="output" class="p-6 bg-slate-50 rounded-xl border whitespace-pre-wrap text-slate-800"></div>
             </div>
         </div>
-    </header>
+    </div>
 
     <script>
         async function generate() {
-            const urlInput = document.getElementById('videoUrl');
+            const url = document.getElementById('videoUrl').value;
             const btn = document.getElementById('genBtn');
             const output = document.getElementById('output');
             const container = document.getElementById('resultContainer');
-            const loadingBox = document.getElementById('loadingBox');
+            const loading = document.getElementById('loadingBox');
             const bar = document.getElementById('progressBar');
 
-            if(!urlInput.value) return alert("Please paste a link!");
+            if(!url) return alert("Please paste a link!");
 
             btn.disabled = true;
-            btn.innerText = "AI is thinking...";
+            btn.innerText = "Processing...";
             container.classList.add('hidden');
-            loadingBox.classList.remove('hidden');
+            loading.classList.remove('hidden');
             bar.classList.add('animate-progress');
 
             try {
                 const response = await fetch('/api/generate.mjs', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ videoUrl: urlInput.value })
+                    body: JSON.stringify({ videoUrl: url })
                 });
 
                 const data = await response.json();
-                if (!response.ok) throw new Error(data.text || "Timeout Error");
+                if (!response.ok) throw new Error(data.text);
 
                 bar.classList.remove('animate-progress');
                 bar.style.width = "100%";
-
                 output.innerText = data.text;
                 container.classList.remove('hidden');
             } catch (err) {
-                alert("The video is too long or the AI timed out. Try another!");
+                alert("Error: " + err.message);
             } finally {
-                btn.innerText = "Generate Content ✨";
                 btn.disabled = false;
-                setTimeout(() => { loadingBox.classList.add('hidden'); bar.style.width = "0%"; }, 1000);
+                btn.innerText = "Generate Content ✨";
+                setTimeout(() => { loading.classList.add('hidden'); bar.style.width = "0%"; }, 1000);
             }
         }
 
         async function copyToClipboard() {
             const text = document.getElementById('output').innerText;
-            const btn = document.getElementById('copyBtn');
             await navigator.clipboard.writeText(text);
-            btn.innerText = "✅ Copied!";
-            setTimeout(() => btn.innerText = "Copy All", 2000);
+            document.getElementById('copyBtn').innerText = "✅ Copied!";
+            setTimeout(() => document.getElementById('copyBtn').innerText = "Copy All", 2000);
         }
     </script>
 </body>
